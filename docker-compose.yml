@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  agent-chat-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - NEXT_PUBLIC_ASSISTANT_ID=${NEXT_PUBLIC_ASSISTANT_ID}
+      - LANGGRAPH_API_URL=${LANGGRAPH_API_URL}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
+    restart: unless-stopped
