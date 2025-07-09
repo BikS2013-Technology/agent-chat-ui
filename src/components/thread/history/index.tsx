@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useThreads } from "@/providers/Thread";
 import { Thread } from "@langchain/langgraph-sdk";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { getContentString } from "../utils";
 import { useQueryState, parseAsBoolean } from "nuqs";
@@ -12,8 +12,18 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PanelRightOpen, PanelRightClose } from "lucide-react";
+import { PanelRightOpen, PanelRightClose, Trash2 } from "lucide-react";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 function ThreadList({
   threads,
@@ -23,42 +33,92 @@ function ThreadList({
   onThreadClick?: (threadId: string) => void;
 }) {
   const [threadId, setThreadId] = useQueryState("threadId");
+  const { deleteThread } = useThreads();
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [threadToDelete, setThreadToDelete] = useState<string | null>(null);
+
+  const handleDeleteClick = (e: React.MouseEvent, threadId: string) => {
+    e.stopPropagation();
+    setThreadToDelete(threadId);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (threadToDelete) {
+      try {
+        await deleteThread(threadToDelete);
+        // If we're deleting the current thread, clear the selection
+        if (threadToDelete === threadId) {
+          setThreadId(null);
+        }
+      } catch (error) {
+        console.error("Failed to delete thread:", error);
+      }
+    }
+    setDeleteConfirmOpen(false);
+    setThreadToDelete(null);
+  };
 
   return (
-    <div className="flex h-full w-full flex-col items-start justify-start gap-2 overflow-y-scroll [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent">
-      {threads.map((t) => {
-        let itemText = t.thread_id;
-        if (
-          typeof t.values === "object" &&
-          t.values &&
-          "messages" in t.values &&
-          Array.isArray(t.values.messages) &&
-          t.values.messages?.length > 0
-        ) {
-          const firstMessage = t.values.messages[0];
-          itemText = getContentString(firstMessage.content);
-        }
-        return (
-          <div
-            key={t.thread_id}
-            className="w-full px-1"
-          >
-            <Button
-              variant="ghost"
-              className="w-[280px] items-start justify-start text-left font-normal"
-              onClick={(e) => {
-                e.preventDefault();
-                onThreadClick?.(t.thread_id);
-                if (t.thread_id === threadId) return;
-                setThreadId(t.thread_id);
-              }}
+    <>
+      <div className="flex h-full w-full flex-col items-start justify-start gap-2 overflow-y-scroll [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent">
+        {threads.map((t) => {
+          let itemText = t.thread_id;
+          if (
+            typeof t.values === "object" &&
+            t.values &&
+            "messages" in t.values &&
+            Array.isArray(t.values.messages) &&
+            t.values.messages?.length > 0
+          ) {
+            const firstMessage = t.values.messages[0];
+            itemText = getContentString(firstMessage.content);
+          }
+          return (
+            <div
+              key={t.thread_id}
+              className="group relative w-full px-1"
             >
-              <p className="truncate text-ellipsis">{itemText}</p>
-            </Button>
-          </div>
-        );
-      })}
-    </div>
+              <Button
+                variant="ghost"
+                className="w-[280px] items-start justify-start text-left font-normal"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onThreadClick?.(t.thread_id);
+                  if (t.thread_id === threadId) return;
+                  setThreadId(t.thread_id);
+                }}
+              >
+                <p className="truncate text-ellipsis">{itemText}</p>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100"
+                onClick={(e) => handleDeleteClick(e, t.thread_id)}
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </div>
+          );
+        })}
+      </div>
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Thread</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this thread? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -92,7 +152,7 @@ export default function ThreadHistory() {
       .then(setThreads)
       .catch(console.error)
       .finally(() => setThreadsLoading(false));
-  }, []);
+  }, [getThreads, setThreads, setThreadsLoading]);
 
   return (
     <>
