@@ -22,6 +22,8 @@ import {
   SquarePen,
   XIcon,
   Plus,
+  CircleX,
+  Download,
 } from "lucide-react";
 import { useQueryState, parseAsBoolean } from "nuqs";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
@@ -45,6 +47,13 @@ import {
   ArtifactTitle,
   useArtifactContext,
 } from "./artifact";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { exportConversation, downloadConversation } from "@/lib/export-conversation";
 
 function StickyToBottomContent(props: {
   content: ReactNode;
@@ -108,6 +117,51 @@ function OpenGitHubRepo() {
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
+  );
+}
+
+function ExportConversationButton({ messages, threadId }: { messages: Message[], threadId: string | null }) {
+  const handleExport = (format: "json" | "markdown" | "text") => {
+    try {
+      const content = exportConversation({
+        messages,
+        format,
+        threadId,
+        timestamp: new Date(),
+      });
+      downloadConversation(content, format, threadId);
+      toast.success(`Conversation exported as ${format.toUpperCase()}`);
+    } catch (error) {
+      toast.error("Failed to export conversation");
+      console.error("Export error:", error);
+    }
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10"
+          disabled={messages.length === 0}
+          title="Export conversation"
+        >
+          <Download className="h-5 w-5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => handleExport("markdown")}>
+          Export as Markdown
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleExport("text")}>
+          Export as Text
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleExport("json")}>
+          Export as JSON
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -327,7 +381,8 @@ export function Thread() {
                   </Button>
                 )}
               </div>
-              <div className="absolute top-2 right-4 flex items-center">
+              <div className="absolute top-2 right-4 flex items-center gap-2">
+                <ExportConversationButton messages={messages} threadId={threadId} />
                 <OpenGitHubRepo />
               </div>
             </div>
@@ -373,7 +428,8 @@ export function Thread() {
               </div>
 
               <div className="flex items-center gap-4">
-                <div className="flex items-center">
+                <div className="flex items-center gap-2">
+                  <ExportConversationButton messages={messages} threadId={threadId} />
                   <OpenGitHubRepo />
                 </div>
                 <TooltipIconButton
