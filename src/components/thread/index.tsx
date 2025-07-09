@@ -1,9 +1,9 @@
 import { v4 as uuidv4 } from "uuid";
-import { ReactNode, useEffect, useRef } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useStreamContext } from "@/providers/Stream";
-import { useState, FormEvent } from "react";
+import { FormEvent } from "react";
 import { Button } from "../ui/button";
 import { Checkpoint, Message } from "@langchain/langgraph-sdk";
 import { AssistantMessage, AssistantMessageLoading } from "./messages/ai";
@@ -93,7 +93,7 @@ function OpenGitHubRepo() {
       <Tooltip>
         <TooltipTrigger asChild>
           <a
-            href="https://github.com/langchain-ai/agent-chat-ui"
+            href="https://github.com/BikS2013/agent-chat-ui"
             target="_blank"
             className="flex items-center justify-center"
           >
@@ -255,18 +255,20 @@ export function Thread() {
     (m) => m.type === "ai" || m.type === "tool",
   );
 
+  const [threadPanelWidth, setThreadPanelWidth] = useState(300);
+
   return (
     <div className="flex h-screen w-full overflow-hidden">
       <div className="relative hidden lg:flex">
         <motion.div
           className="absolute z-20 h-full overflow-hidden border-r bg-white"
-          style={{ width: 300 }}
+          style={{ width: threadPanelWidth }}
           animate={
             isLargeScreen
-              ? { x: chatHistoryOpen ? 0 : -300 }
-              : { x: chatHistoryOpen ? 0 : -300 }
+              ? { x: chatHistoryOpen ? 0 : -threadPanelWidth }
+              : { x: chatHistoryOpen ? 0 : -threadPanelWidth }
           }
-          initial={{ x: -300 }}
+          initial={{ x: -threadPanelWidth }}
           transition={
             isLargeScreen
               ? { type: "spring", stiffness: 300, damping: 30 }
@@ -275,9 +277,9 @@ export function Thread() {
         >
           <div
             className="relative h-full"
-            style={{ width: 300 }}
+            style={{ width: threadPanelWidth }}
           >
-            <ThreadHistory />
+            <ThreadHistory onWidthChange={setThreadPanelWidth} />
           </div>
         </motion.div>
       </div>
@@ -295,10 +297,10 @@ export function Thread() {
           )}
           layout={isLargeScreen}
           animate={{
-            marginLeft: chatHistoryOpen ? (isLargeScreen ? 300 : 0) : 0,
+            marginLeft: chatHistoryOpen ? (isLargeScreen ? threadPanelWidth : 0) : 0,
             width: chatHistoryOpen
               ? isLargeScreen
-                ? "calc(100% - 300px)"
+                ? `calc(100% - ${threadPanelWidth}px)`
                 : "100%"
               : "100%",
           }}

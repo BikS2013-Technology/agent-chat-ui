@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useThreads } from "@/providers/Thread";
 import { Thread } from "@langchain/langgraph-sdk";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 
 import { getContentString } from "../utils";
 import { useQueryState, parseAsBoolean } from "nuqs";
@@ -12,7 +12,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PanelRightOpen, PanelRightClose, Trash2 } from "lucide-react";
+import { PanelRightOpen, PanelRightClose, Trash2, GripVertical } from "lucide-react";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {
   AlertDialog,
@@ -81,7 +81,7 @@ function ThreadList({
             >
               <Button
                 variant="ghost"
-                className="w-[280px] items-start justify-start text-left font-normal"
+                className="w-full pr-10 items-start justify-start text-left font-normal"
                 onClick={(e) => {
                   e.preventDefault();
                   onThreadClick?.(t.thread_id);
@@ -124,18 +124,26 @@ function ThreadList({
 
 function ThreadHistoryLoading() {
   return (
-    <div className="flex h-full w-full flex-col items-start justify-start gap-2 overflow-y-scroll [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent">
+    <div className="flex h-full w-full flex-col items-start justify-start gap-2 overflow-y-scroll px-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent">
       {Array.from({ length: 30 }).map((_, i) => (
         <Skeleton
           key={`skeleton-${i}`}
-          className="h-10 w-[280px]"
+          className="h-10 w-full"
         />
       ))}
     </div>
   );
 }
 
-export default function ThreadHistory() {
+const MIN_WIDTH = 200;
+const MAX_WIDTH = 600;
+const DEFAULT_WIDTH = 300;
+
+interface ThreadHistoryProps {
+  onWidthChange?: (width: number) => void;
+}
+
+export default function ThreadHistory({ onWidthChange }: ThreadHistoryProps = {}) {
   const isLargeScreen = useMediaQuery("(min-width: 1024px)");
   const [chatHistoryOpen, setChatHistoryOpen] = useQueryState(
     "chatHistoryOpen",
@@ -144,6 +152,60 @@ export default function ThreadHistory() {
 
   const { getThreads, threads, setThreads, threadsLoading, setThreadsLoading } =
     useThreads();
+
+  // Resizing state and refs
+  const [panelWidth, setPanelWidth] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("threadHistoryPanelWidth");
+      const width = saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
+      onWidthChange?.(width);
+      return width;
+    }
+    return DEFAULT_WIDTH;
+  });
+  const isResizing = useRef(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Handle mouse down on resize handle
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizing.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, []);
+
+  // Handle mouse move for resizing
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing.current) return;
+      
+      const newWidth = e.clientX;
+      const clampedWidth = Math.min(Math.max(newWidth, MIN_WIDTH), MAX_WIDTH);
+      setPanelWidth(clampedWidth);
+      onWidthChange?.(clampedWidth);
+      
+      // Save to localStorage while dragging for smoother experience
+      if (typeof window !== "undefined") {
+        localStorage.setItem("threadHistoryPanelWidth", clampedWidth.toString());
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (!isResizing.current) return;
+      
+      isResizing.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -156,7 +218,22 @@ export default function ThreadHistory() {
 
   return (
     <>
-      <div className="shadow-inner-right hidden h-screen w-[300px] shrink-0 flex-col items-start justify-start gap-6 border-r-[1px] border-slate-300 lg:flex">
+      <div 
+        ref={panelRef}
+        className="shadow-inner-right relative hidden h-screen shrink-0 flex-col items-start justify-start gap-6 border-r-2 border-slate-200 lg:flex"
+        style={{ width: `${panelWidth}px` }}
+      >
+        {/* Resize handle */}
+        <div
+          className="absolute -right-3 top-0 z-20 h-full w-6 cursor-col-resize flex items-center justify-center group"
+          onMouseDown={handleMouseDown}
+        >
+          <div className="h-full w-1 bg-slate-200 group-hover:bg-blue-500 transition-colors" />
+          <div className="absolute">
+            <GripVertical className="h-6 w-6 text-slate-400 group-hover:text-blue-600 transition-colors" />
+          </div>
+        </div>
+
         <div className="flex w-full items-center justify-between px-4 pt-1.5">
           <Button
             className="hover:bg-gray-100"
