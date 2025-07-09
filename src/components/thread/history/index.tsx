@@ -158,13 +158,17 @@ export default function ThreadHistory({ onWidthChange }: ThreadHistoryProps = {}
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("threadHistoryPanelWidth");
       const width = saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
-      onWidthChange?.(width);
       return width;
     }
     return DEFAULT_WIDTH;
   });
   const isResizing = useRef(false);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  // Notify parent of initial width after mount
+  useEffect(() => {
+    onWidthChange?.(panelWidth);
+  }, []); // Only run on mount
 
   // Handle mouse down on resize handle
   const handleMouseDown = useCallback((e: React.MouseEvent) => {

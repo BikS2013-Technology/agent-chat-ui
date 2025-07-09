@@ -54,6 +54,8 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { exportConversation, downloadConversation } from "@/lib/export-conversation";
+import { JsonView } from "./json-view";
+import { FileJson2, MessageSquare } from "lucide-react";
 
 function StickyToBottomContent(props: {
   content: ReactNode;
@@ -178,6 +180,7 @@ export function Thread() {
     "hideToolCalls",
     parseAsBoolean.withDefault(false),
   );
+  const [viewMode, setViewMode] = useState<"chat" | "json">("chat");
   const [input, setInput] = useState("");
   const {
     contentBlocks,
@@ -429,6 +432,26 @@ export function Thread() {
 
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
+                  <div className="flex items-center rounded-md border p-1">
+                    <Button
+                      variant={viewMode === "chat" ? "secondary" : "ghost"}
+                      size="sm"
+                      onClick={() => setViewMode("chat")}
+                      className="h-7 px-2"
+                    >
+                      <MessageSquare className="h-4 w-4 mr-1" />
+                      Chat
+                    </Button>
+                    <Button
+                      variant={viewMode === "json" ? "secondary" : "ghost"}
+                      size="sm"
+                      onClick={() => setViewMode("json")}
+                      className="h-7 px-2"
+                    >
+                      <FileJson2 className="h-4 w-4 mr-1" />
+                      JSON
+                    </Button>
+                  </div>
                   <ExportConversationButton messages={messages} threadId={threadId} />
                   <OpenGitHubRepo />
                 </div>
@@ -447,49 +470,50 @@ export function Thread() {
             </div>
           )}
 
-          <StickToBottom className="relative flex-1 overflow-hidden">
-            <StickyToBottomContent
-              className={cn(
-                "absolute inset-0 overflow-y-scroll px-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent",
-                !chatStarted && "mt-[25vh] flex flex-col items-stretch",
-                chatStarted && "grid grid-rows-[1fr_auto]",
-              )}
-              contentClassName="pt-8 pb-16 max-w-3xl mx-auto flex flex-col gap-4 w-full"
-              content={
-                <>
-                  {messages
-                    .filter((m) => !m.id?.startsWith(DO_NOT_RENDER_ID_PREFIX))
-                    .map((message, index) =>
-                      message.type === "human" ? (
-                        <HumanMessage
-                          key={message.id || `${message.type}-${index}`}
-                          message={message}
-                          isLoading={isLoading}
-                        />
-                      ) : (
-                        <AssistantMessage
-                          key={message.id || `${message.type}-${index}`}
-                          message={message}
-                          isLoading={isLoading}
-                          handleRegenerate={handleRegenerate}
-                        />
-                      ),
+          {viewMode === "chat" ? (
+            <StickToBottom className="relative flex-1 overflow-hidden">
+              <StickyToBottomContent
+                className={cn(
+                  "absolute inset-0 overflow-y-scroll px-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent",
+                  !chatStarted && "mt-[25vh] flex flex-col items-stretch",
+                  chatStarted && "grid grid-rows-[1fr_auto]",
+                )}
+                contentClassName="pt-8 pb-16 max-w-3xl mx-auto flex flex-col gap-4 w-full"
+                content={
+                  <>
+                    {messages
+                      .filter((m) => !m.id?.startsWith(DO_NOT_RENDER_ID_PREFIX))
+                      .map((message, index) =>
+                        message.type === "human" ? (
+                          <HumanMessage
+                            key={message.id || `${message.type}-${index}`}
+                            message={message}
+                            isLoading={isLoading}
+                          />
+                        ) : (
+                          <AssistantMessage
+                            key={message.id || `${message.type}-${index}`}
+                            message={message}
+                            isLoading={isLoading}
+                            handleRegenerate={handleRegenerate}
+                          />
+                        ),
+                      )}
+                    {/* Special rendering case where there are no AI/tool messages, but there is an interrupt.
+                      We need to render it outside of the messages list, since there are no messages to render */}
+                    {hasNoAIOrToolMessages && !!stream.interrupt && (
+                      <AssistantMessage
+                        key="interrupt-msg"
+                        message={undefined}
+                        isLoading={isLoading}
+                        handleRegenerate={handleRegenerate}
+                      />
                     )}
-                  {/* Special rendering case where there are no AI/tool messages, but there is an interrupt.
-                    We need to render it outside of the messages list, since there are no messages to render */}
-                  {hasNoAIOrToolMessages && !!stream.interrupt && (
-                    <AssistantMessage
-                      key="interrupt-msg"
-                      message={undefined}
-                      isLoading={isLoading}
-                      handleRegenerate={handleRegenerate}
-                    />
-                  )}
-                  {isLoading && !firstTokenReceived && (
-                    <AssistantMessageLoading />
-                  )}
-                </>
-              }
+                    {isLoading && !firstTokenReceived && (
+                      <AssistantMessageLoading />
+                    )}
+                  </>
+                }
               footer={
                 <div className="sticky bottom-0 flex flex-col items-center gap-8 bg-white">
                   {!chatStarted && (
@@ -602,6 +626,9 @@ export function Thread() {
               }
             />
           </StickToBottom>
+          ) : (
+            <JsonView messages={messages} className="flex-1" />
+          )}
         </motion.div>
         <div className="relative flex flex-col border-l">
           <div className="absolute inset-0 flex min-w-[30vw] flex-col">
