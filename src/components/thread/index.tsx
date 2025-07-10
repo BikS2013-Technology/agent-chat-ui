@@ -56,6 +56,7 @@ import {
 import { exportConversation, downloadConversation } from "@/lib/export-conversation";
 import { JsonView } from "./json-view";
 import { FileJson2, MessageSquare } from "lucide-react";
+import { ThemeToggle } from "../ui/theme-toggle";
 
 function StickyToBottomContent(props: {
   content: ReactNode;
@@ -313,19 +314,24 @@ export function Thread() {
   );
 
   const [threadPanelWidth, setThreadPanelWidth] = useState(300);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div className="flex h-screen w-full overflow-hidden">
       <div className="relative hidden lg:flex">
         <motion.div
-          className="absolute z-20 h-full overflow-hidden border-r bg-white"
-          style={{ width: threadPanelWidth }}
+          className="absolute z-30 h-full overflow-hidden border-r bg-background"
+          style={{ width: mounted ? threadPanelWidth : 300 }}
           animate={
             isLargeScreen
-              ? { x: chatHistoryOpen ? 0 : -threadPanelWidth }
-              : { x: chatHistoryOpen ? 0 : -threadPanelWidth }
+              ? { x: chatHistoryOpen ? 0 : -(mounted ? threadPanelWidth : 300) }
+              : { x: chatHistoryOpen ? 0 : -(mounted ? threadPanelWidth : 300) }
           }
-          initial={{ x: -threadPanelWidth }}
+          initial={{ x: chatHistoryOpen ? 0 : -300 }}
           transition={
             isLargeScreen
               ? { type: "spring", stiffness: 300, damping: 30 }
@@ -353,13 +359,13 @@ export function Thread() {
             !chatStarted && "grid-rows-[1fr]",
           )}
           layout={isLargeScreen}
+          initial={{
+            marginLeft: 0,
+            paddingLeft: chatHistoryOpen && isLargeScreen ? 300 : 0,
+          }}
           animate={{
-            marginLeft: chatHistoryOpen ? (isLargeScreen ? threadPanelWidth : 0) : 0,
-            width: chatHistoryOpen
-              ? isLargeScreen
-                ? `calc(100% - ${threadPanelWidth}px)`
-                : "100%"
-              : "100%",
+            marginLeft: 0,
+            paddingLeft: chatHistoryOpen && isLargeScreen ? (mounted ? threadPanelWidth : 300) : 0,
           }}
           transition={
             isLargeScreen
@@ -372,7 +378,6 @@ export function Thread() {
               <div>
                 {(!chatHistoryOpen || !isLargeScreen) && (
                   <Button
-                    className="hover:bg-gray-100"
                     variant="ghost"
                     onClick={() => setChatHistoryOpen((p) => !p)}
                   >
@@ -396,7 +401,6 @@ export function Thread() {
                 <div className="absolute left-0 z-10">
                   {(!chatHistoryOpen || !isLargeScreen) && (
                     <Button
-                      className="hover:bg-gray-100"
                       variant="ghost"
                       onClick={() => setChatHistoryOpen((p) => !p)}
                     >
@@ -454,6 +458,7 @@ export function Thread() {
                   </div>
                   <ExportConversationButton messages={messages} threadId={threadId} />
                   <OpenGitHubRepo />
+                  <ThemeToggle />
                 </div>
                 <TooltipIconButton
                   size="lg"
@@ -474,7 +479,7 @@ export function Thread() {
             <StickToBottom className="relative flex-1 overflow-hidden">
               <StickyToBottomContent
                 className={cn(
-                  "absolute inset-0 overflow-y-scroll px-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent",
+                  "absolute inset-0 overflow-y-scroll px-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent",
                   !chatStarted && "mt-[25vh] flex flex-col items-stretch",
                   chatStarted && "grid grid-rows-[1fr_auto]",
                 )}
@@ -515,7 +520,7 @@ export function Thread() {
                   </>
                 }
               footer={
-                <div className="sticky bottom-0 flex flex-col items-center gap-8 bg-white">
+                <div className="sticky bottom-0 flex flex-col items-center gap-8 bg-background">
                   {!chatStarted && (
                     <div className="flex items-center gap-3">
                       <LangGraphLogoSVG className="h-8 flex-shrink-0" />
@@ -575,7 +580,7 @@ export function Thread() {
                             />
                             <Label
                               htmlFor="render-tool-calls"
-                              className="text-sm text-gray-600"
+                              className="text-sm text-muted-foreground"
                             >
                               Hide Tool Calls
                             </Label>
@@ -585,8 +590,8 @@ export function Thread() {
                           htmlFor="file-input"
                           className="flex cursor-pointer items-center gap-2"
                         >
-                          <Plus className="size-5 text-gray-600" />
-                          <span className="text-sm text-gray-600">
+                          <Plus className="size-5 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">
                             Upload PDF or Image
                           </span>
                         </Label>

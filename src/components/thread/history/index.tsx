@@ -61,7 +61,7 @@ function ThreadList({
 
   return (
     <>
-      <div className="flex h-full w-full flex-col items-start justify-start gap-2 overflow-y-scroll [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent">
+      <div className="flex h-full w-full flex-col items-start justify-start gap-2 overflow-y-scroll [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
         {threads.map((t) => {
           let itemText = t.thread_id;
           if (
@@ -124,7 +124,7 @@ function ThreadList({
 
 function ThreadHistoryLoading() {
   return (
-    <div className="flex h-full w-full flex-col items-start justify-start gap-2 overflow-y-scroll px-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent">
+    <div className="flex h-full w-full flex-col items-start justify-start gap-2 overflow-y-scroll px-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
       {Array.from({ length: 30 }).map((_, i) => (
         <Skeleton
           key={`skeleton-${i}`}
@@ -154,20 +154,22 @@ export default function ThreadHistory({ onWidthChange }: ThreadHistoryProps = {}
     useThreads();
 
   // Resizing state and refs
-  const [panelWidth, setPanelWidth] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("threadHistoryPanelWidth");
-      const width = saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
-      return width;
-    }
-    return DEFAULT_WIDTH;
-  });
+  const [panelWidth, setPanelWidth] = useState(DEFAULT_WIDTH);
   const isResizing = useRef(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Notify parent of initial width after mount
+  // Load saved width after mount to avoid hydration issues
   useEffect(() => {
-    onWidthChange?.(panelWidth);
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("threadHistoryPanelWidth");
+      if (saved) {
+        const width = parseInt(saved, 10);
+        setPanelWidth(width);
+        onWidthChange?.(width);
+      } else {
+        onWidthChange?.(panelWidth);
+      }
+    }
   }, []); // Only run on mount
 
   // Handle mouse down on resize handle
@@ -224,23 +226,19 @@ export default function ThreadHistory({ onWidthChange }: ThreadHistoryProps = {}
     <>
       <div 
         ref={panelRef}
-        className="shadow-inner-right relative hidden h-screen shrink-0 flex-col items-start justify-start gap-6 border-r-2 border-slate-200 lg:flex"
+        className="shadow-inner-right relative hidden h-screen shrink-0 flex-col items-start justify-start gap-6 border-r-2 border-border bg-background lg:flex"
         style={{ width: `${panelWidth}px` }}
       >
         {/* Resize handle */}
         <div
-          className="absolute -right-3 top-0 z-20 h-full w-6 cursor-col-resize flex items-center justify-center group"
+          className="absolute -right-2 top-0 z-30 h-full w-4 cursor-col-resize flex items-center justify-center group hover:bg-accent/50 transition-colors"
           onMouseDown={handleMouseDown}
         >
-          <div className="h-full w-1 bg-slate-200 group-hover:bg-blue-500 transition-colors" />
-          <div className="absolute">
-            <GripVertical className="h-6 w-6 text-slate-400 group-hover:text-blue-600 transition-colors" />
-          </div>
+          <div className="h-12 w-1 rounded-full bg-border group-hover:bg-primary transition-colors" />
         </div>
 
         <div className="flex w-full items-center justify-between px-4 pt-1.5">
           <Button
-            className="hover:bg-gray-100"
             variant="ghost"
             onClick={() => setChatHistoryOpen((p) => !p)}
           >
@@ -250,7 +248,7 @@ export default function ThreadHistory({ onWidthChange }: ThreadHistoryProps = {}
               <PanelRightClose className="size-5" />
             )}
           </Button>
-          <h1 className="text-xl font-semibold tracking-tight">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
             Thread History
           </h1>
         </div>
