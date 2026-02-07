@@ -13,8 +13,10 @@ COPY package.json pnpm-lock.yaml ./
 # Install dependencies
 RUN pnpm install --no-frozen-lockfile
 
-# Copy source code
-COPY . .
+# Copy source code (explicit to work around .dockerignore not being read by Apple Container)
+COPY src ./src
+COPY public ./public
+COPY next.config.mjs tsconfig.json postcss.config.mjs components.json ./
 
 # Build the application
 RUN pnpm build
